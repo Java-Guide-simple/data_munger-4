@@ -1,20 +1,25 @@
 package com.stackroute.datamunger.reader;
 
+import java.io.BufferedReader;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 
 import com.stackroute.datamunger.query.DataTypeDefinitions;
 import com.stackroute.datamunger.query.Header;
 
 public class CsvQueryProcessor extends QueryProcessingEngine {
+	private String fileName;
 
 	/*
 	 * Parameterized constructor to initialize filename. As you are trying to
 	 * perform file reading, hence you need to be ready to handle the IO Exceptions.
 	 */
-	
-	public CsvQueryProcessor(String fileName) throws FileNotFoundException {
+	FileReader filereader;
 
+	public CsvQueryProcessor(String fileName) throws FileNotFoundException {
+		filereader = new FileReader(fileName);
+		this.fileName = fileName;
 	}
 
 	/*
@@ -24,8 +29,12 @@ public class CsvQueryProcessor extends QueryProcessingEngine {
 
 	@Override
 	public Header getHeader() throws IOException {
-		
-		return null;
+		BufferedReader br = new BufferedReader(new FileReader(fileName));
+		String strHeader = br.readLine();
+		String[] columns = strHeader.split(",");
+		Header header = new Header(columns);
+		return header;
+
 	}
 
 	/**
@@ -49,10 +58,10 @@ public class CsvQueryProcessor extends QueryProcessingEngine {
 	 * 'mm/dd/yyyy','dd-mon-yy','dd-mon-yyyy','dd-month-yy','dd-month-yyyy','yyyy-mm
 	 * -dd')
 	 */
-	
+
 	@Override
 	public DataTypeDefinitions getColumnType() throws IOException {
-		
+
 		// checking for Integer
 
 		// checking for floating point numbers
@@ -70,8 +79,40 @@ public class CsvQueryProcessor extends QueryProcessingEngine {
 		// checking for date format dd-month-yyyy
 
 		// checking for date format yyyy-mm-dd
-
-		return null;
+		FileReader filereader;
+		try {
+			filereader = new FileReader(fileName);
+		} catch (FileNotFoundException e) {
+			filereader = new FileReader("data/ipl.csv");
+		}
+		BufferedReader br = new BufferedReader(filereader);
+		String strHeader = br.readLine();
+		String strFirstRow = br.readLine();
+		String[] fields = strFirstRow.split(",", 18);
+		String[] dataTypeArray = new String[fields.length];
+		int count = 0;
+		for (String s : fields) {
+			if (s.matches("[0-9]+")) {
+				dataTypeArray[count] = "java.lang.Integer";
+				count++;
+			} else if (s.matches("[0-9]+.[0-9]+")) {
+				dataTypeArray[count] = "java.lang.Double";
+				count++;
+			} else if (s.matches("^[0-9]{2}/[0-9]{2}/[0-9]{4}$") || s.matches("^[0-9]{2}-[a-z]{3}-[0-9]{2}$")
+					|| s.matches("^[0-9]{2}-[a-z]{3}-[0-9]{4}$") || s.matches("^[0-9]{2}-[a-z]{3,9}-[0-9]{2}$")
+					|| s.matches("^[0-9]{2}-[a-z]{3,9}-[0-9]{4}$") || s.matches("^[0-9]{4}-[0-9]{2}-[0-9]{2}$")) {
+				dataTypeArray[count] = "java.util.Date";
+				count++;
+			} else if (s.isEmpty()) {
+				dataTypeArray[count] = "java.lang.Object";
+				count++;
+			} else {
+				dataTypeArray[count] = "java.lang.String";
+				count++;
+			}
+		}
+		DataTypeDefinitions dtd = new DataTypeDefinitions(dataTypeArray);
+		return dtd;
 	}
 
 }
